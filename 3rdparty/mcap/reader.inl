@@ -566,7 +566,7 @@ LinearMessageView McapReader::readMessages(const ProblemCallback& onProblem, Tim
   return readMessages(onProblem, options);
 }
 
-LinearMessageView McapReader::readMessages(const ProblemCallback& onProblem,
+LinearMessageView McapReader::  readMessages(const ProblemCallback& onProblem,
                                            const ReadMessageOptions& options) {
   // Check that open() has been successfully called
   if (!dataSource() || dataStart_ == 0) {

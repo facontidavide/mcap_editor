@@ -22,25 +22,25 @@ public:
 private slots:
   void on_buttonLoad_clicked();
 
-  void on_buttonSelect_clicked();
-
-  void on_buttonDeselect_clicked();
-
   void on_buttonResetTimeRange_clicked();
 
   void on_tableTopics_itemSelectionChanged();
 
   void on_buttonSave_clicked();
 
+  void on_buttonToggleSelected_clicked();
+
   private:
   Ui::MainWindow *ui;
 
   void openFile();
   void openFileWASM();
+
+  void saveFile(mcap::McapWriterOptions options);
+  void saveFileWASM(mcap::McapWriterOptions options);
+
   void readMCAP();
-  void saveMCAP(mcap::McapReader& reader,
-                mcap::McapWriter& writer,
-                const std::set<std::string>& channels);
+  void writeMCAP(mcap::McapWriter& writer);
 
   struct SchemaInfo
   {
@@ -56,6 +56,8 @@ private slots:
   uint64_t time_start_;
   uint64_t time_end_;
   mcap::McapReader reader_;
+
+  QString file_opened_;
 };
 
 #endif // MAINWINDOW_H

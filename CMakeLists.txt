@@ -9,6 +9,7 @@ set(ZSTD_MULTITHREAD_SUPPORT OFF CACHE BOOL "MULTITHREADING SUPPORT")
 set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "BUILD PROGRAMS")
 add_subdirectory(3rdparty/zstd/build/cmake)
 
+set(LZ4_BUILD_LEGACY_LZ4C OFF CACHE BOOL "Build legacy lz4c")
 set(LZ4_BUILD_CLI OFF CACHE BOOL "Build lz4 program")
 add_subdirectory(3rdparty/lz4/build/cmake)
 
@@ -30,7 +31,8 @@ qt_add_executable(mcap_editor
     src/mainwindow.cpp
     src/mainwindow.h
     src/mainwindow.ui
-    src/mcap_impl.cpp)
+    src/mcap_impl.cpp
+    src/bytearray_writable.hpp)
 
 target_link_libraries(mcap_editor PRIVATE
     Qt::Core
@@ -39,6 +41,11 @@ target_link_libraries(mcap_editor PRIVATE
     libzstd_static
     lz4_static
 )
+
+
+if(EMSCRIPTEN)
+    target_compile_definitions(mcap_editor PRIVATE USING_WASM=1)
+endif()
 
 target_include_directories(mcap_editor PRIVATE
      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/3rdparty>

@@ -1,10 +1,11 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-
+#include "bytearray_writable.hpp"
 
 #include <QSettings>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QProgressDialog>
 #include <set>
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -63,7 +64,6 @@ void MainWindow::openFileWASM()
                                      QString::fromStdString(res.message));
                 return;
             }
-
             readMCAP();
         }
     };
@@ -72,9 +72,78 @@ void MainWindow::openFileWASM()
                                     fileContentReady);
 }
 
+void MainWindow::saveFile(mcap::McapWriterOptions options)
+{
+    QSettings settings;
+    QString dir = settings.value("MainWindow.lastDirectorySave",
+                                 QDir::currentPath()).toString();
+
+    QString filename = QFileDialog::getSaveFileName(
+        this, "Open a MCAP file", dir, "MCAP files (*.mcap)");
+
+    if(filename.isEmpty())
+    {
+        return;
+    }
+    if(QFileInfo(filename).suffix() != "mcap")
+    {
+        filename += ".mcap";
+    }
+    dir = QFileInfo(filename).absolutePath();
+    settings.setValue("MainWindow.lastDirectorySave", dir);
+
+    // Read and write loop
+
+    mcap::McapWriter writer;
+    auto status = writer.open(filename.toStdString(), options);
+    if (!status.ok())
+    {
+        QMessageBox::warning(this, "Error opening file",
+                             "Can't open the file for writing");
+        return;
+    }
+    file_opened_ = filename;
+    writeMCAP(writer);
+}
+
+void MainWindow::saveFileWASM(mcap::McapWriterOptions options)
+{
+    ByteArrayInterface array;
+    mcap::McapWriter writer;
+    writer.open(array, options);
+
+    writeMCAP(writer);
+
+    QFileDialog::saveFileContent(array.byteArray(), QFileInfo(file_opened_).fileName());
+}
+
 void MainWindow::on_buttonLoad_clicked()
 {
+#ifdef USING_WASM
+    openFileWASM();
+#else
     openFile();
+#endif
+}
+
+void MainWindow::on_buttonSave_clicked()
+{
+    mcap::McapWriterOptions options(reader_.header()->profile);
+    if(ui->radioLZ4->isChecked()) {
+        options.compression = mcap::Compression::Lz4;
+    }
+    else if(ui->radioZSTD->isChecked()) {
+        options.compression = mcap::Compression::Zstd;
+    }
+    else {
+        options.compression = mcap::Compression::None;
+    }
+
+#ifdef USING_WASM
+    saveFileWASM(options);
+#else
+    saveFile(options);
+#endif
 }
 
 void MainWindow::readMCAP()
@@ -150,12 +219,15 @@ void MainWindow::readMCAP()
     }
 
     auto start_date = QDateTime::fromMSecsSinceEpoch(time_start_ / 1000000);
-    auto end_date = QDateTime::fromMSecsSinceEpoch(time_end_ / 1000000);
+    auto end_date = QDateTime::fromMSecsSinceEpoch(1 + time_end_ / 1000000);
+    bool is_date = start_date.date() > QDate(1999, 1, 1) &&
+                   end_date.date() > QDate(1999, 1, 1);
 
     for(auto* edit: {ui->dateTimeStart, ui->dateTimeStartNew,
                      ui->dateTimeEnd, ui->dateTimeEndNew})
     {
-        if(start_date.date() < QDate(1999, 1, 1))
+        edit->setMinimumDateTime(QDateTime::fromMSecsSinceEpoch(0));
+        if(!is_date)
         {
             edit->setTimeSpec(Qt::TimeSpec::UTC);
             edit->setDisplayFormat("H:mm:ss");
@@ -179,27 +251,13 @@ void MainWindow::readMCAP()
     ui->widgetSave->setEnabled(true);
 }
 
-void MainWindow::on_buttonSelect_clicked()
-{
-    for(int row=0; row<ui->tableTopics->rowCount(); row++)
-    {
-        ui->tableTopics->item(row, 0)->setCheckState(Qt::Checked);
-    }
-}
-
-
-void MainWindow::on_buttonDeselect_clicked()
-{
-    for(int row=0; row<ui->tableTopics->rowCount(); row++)
-    {
-        ui->tableTopics->item(row, 0)->setCheckState(Qt::Unchecked);
-    }
-}
-
 void MainWindow::on_buttonResetTimeRange_clicked()
 {
-    ui->dateTimeStartNew->setDateTime( ui->dateTimeStart->dateTime() );
-    ui->dateTimeEndNew->setDateTime( ui->dateTimeEnd->dateTime() );
+    auto start = ui->dateTimeStart->dateTime();
+    auto end = ui->dateTimeEnd->dateTime();
+
+    ui->dateTimeStartNew->setDateTime(start);
+    ui->dateTimeEndNew->setDateTime(end);
 }
 
 void MainWindow::on_tableTopics_itemSelectionChanged()
@@ -221,66 +279,23 @@ void MainWindow::on_tableTopics_itemSelectionChanged()
     }
 }
 
-
-void MainWindow::on_buttonSave_clicked()
+void MainWindow::writeMCAP(mcap::McapWriter& writer)
 {
-    QSettings settings;
-
-    QString dir = settings.value("MainWindow.lastDirectorySave",
-                                 QDir::currentPath()).toString();
-
-    auto filename = QFileDialog::getSaveFileName(
-        this, "Open a MCAP file", dir, "MCAP files (*.mcap)");
-
-    if(filename.isEmpty())
-    {
-        return;
-    }
-    dir = QFileInfo(filename).absolutePath();
-    settings.setValue("MainWindow.lastDirectorySave", dir);
-
-    std::set<std::string> select_topics;
+    std::set<std::string> select_channels;
 
     for(int row=0; row<ui->tableTopics->rowCount(); row++)
     {
         auto item = ui->tableTopics->item(row, 0);
         if(item->checkState() == Qt::Checked)
         {
-            select_topics.insert(item->text().toStdString());
+            select_channels.insert(item->text().toStdString());
         }
     }
-    // Read and write loop
-    mcap::McapWriter writer;
-    mcap::McapWriterOptions options(reader_.header()->profile);
-    if(ui->radioLZ4->isChecked()) {
-        options.compression = mcap::Compression::Lz4;
-    }
-    else if(ui->radioZSTD->isChecked()) {
-        options.compression = mcap::Compression::Zstd;
-    }
-    else {
-        options.compression = mcap::Compression::None;
-    }
 
-    auto status = writer.open(filename.toStdString(), options);
-    if (!status.ok())
-    {
-        QMessageBox::warning(this, "Error opening file",
-                             "Can't open the file for writing");
-        return;
-    }
-    saveMCAP(reader_, writer, select_topics);
-}
-
-
-void MainWindow::saveMCAP(mcap::McapReader& reader,
-                          mcap::McapWriter& writer,
-                          const std::set<std::string>& channels)
-{
     std::map<mcap::SchemaId, mcap::SchemaId> old_to_new_schema_id;
     std::map<std::string, mcap::ChannelId> channel_ids_;
 
-    for(const auto& channel_name: channels)
+    for(const auto& channel_name: select_channels)
     {
         auto old_id = schema_id_by_channel_.at(channel_name);
         auto it = old_to_new_schema_id.find(old_id);
@@ -301,13 +316,28 @@ void MainWindow::saveMCAP(mcap::McapReader& reader,
     }
     mcap::ReadMessageOptions options;
     mcap::ProblemCallback problem = [](const mcap::Status&) {};
-    options.topicFilter = [&channels](std::string_view name) -> bool
+    options.topicFilter = [&select_channels](std::string_view name) -> bool
     {
-        return channels.count(std::string(name)) != 0;
+        return select_channels.count(std::string(name)) != 0;
     };
 
-    for (const auto& msg : reader.readMessages(problem, options))
+    if(ui->dateTimeStart->dateTime() != ui->dateTimeStartNew->dateTime())
     {
+        options.startTime = ui->dateTimeStartNew->dateTime().toMSecsSinceEpoch() * 1000000;
+    }
+    if(ui->dateTimeEnd->dateTime() != ui->dateTimeEndNew->dateTime())
+    {
+        options.endTime = ui->dateTimeEndNew->dateTime().toMSecsSinceEpoch() * 1000000;
+    }
+
+    QProgressDialog progress("Please wait, this may take a while...", "Cancel", time_start_, time_end_, this);
+    progress.setWindowTitle("Saving file");
+    progress.setWindowModality(Qt::WindowModal);
+
+    for (const auto& msg : reader_.readMessages(problem, options))
+    {
+        progress.setValue(msg.message.logTime);
+        progress.setValue( msg.message.logTime );
         auto new_channel_id = channel_ids_.at(msg.channel->topic);
 
         mcap::Message new_msg = msg.message;
@@ -322,4 +352,14 @@ void MainWindow::saveMCAP(mcap::McapReader& reader,
     }
 }
 
+void MainWindow::on_buttonToggleSelected_clicked()
+{
+    for(auto item: ui->tableTopics->selectedItems())
+    {
+        if(item->column() == 0)
+        {
+            item->setCheckState( (item->checkState() == Qt::Unchecked) ? Qt::Checked : Qt::Unchecked);
+        }
+    }
+}
 
