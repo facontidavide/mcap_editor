@@ -30,6 +30,8 @@ private slots:
 
   void on_buttonToggleSelected_clicked();
 
+  void on_buttonSave_pressed();
+
   private:
   Ui::MainWindow *ui;
 
@@ -39,7 +41,7 @@ private slots:
   void saveFile(mcap::McapWriterOptions options);
   void saveFileWASM(mcap::McapWriterOptions options);
 
-  void readMCAP();
+  void readMCAP(mcap::McapReader &reader);
   void writeMCAP(mcap::McapWriter& writer);
 
   struct SchemaInfo
@@ -55,7 +57,10 @@ private slots:
 
   uint64_t time_start_;
   uint64_t time_end_;
-  mcap::McapReader reader_;
+  std::string wasm_buffer_;
+  std::string profile_;
+
+  QByteArray read_buffer_;
 
   QString file_opened_;
 };

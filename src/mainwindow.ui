@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1362</width>
-    <height>1033</height>
+    <width>1500</width>
+    <height>1016</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,7 +17,51 @@
    <string notr="true">background-color: rgb(246, 245, 244);</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout_4" stretch="0,0,1">
+   <layout class="QVBoxLayout" name="verticalLayout_4" stretch="0,0,0,0,1">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <item>
+     <widget class="QWidget" name="widget_2" native="true">
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(255, 252, 152);</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_5">
+       <item>
+        <widget class="QLabel" name="label_10">
+         <property name="text">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You can find the source code and submit bugs in the Github repo: &lt;a href=&quot;https://github.com/facontidavide/mcap_editor&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;https://github.com/facontidavide/mcap_editor&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="Line" name="line_3">
+      <property name="frameShadow">
+       <enum>QFrame::Plain</enum>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+     </widget>
+    </item>
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_9" stretch="1,0,1">
       <property name="spacing">
@@ -27,19 +71,6 @@
        <widget class="QWidget" name="widget" native="true">
         <layout class="QVBoxLayout" name="verticalLayout_3">
          <item>
-          <spacer name="verticalSpacer_2">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item>
           <widget class="QLabel" name="label_3">
            <property name="font">
             <font>
@@ -47,7 +78,7 @@
             </font>
            </property>
            <property name="text">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:14pt; font-weight:700;&quot;&gt;Welcome to the MCAP Editor&lt;br/&gt;&lt;/span&gt;&lt;br/&gt;Once you load an MCAP file, you can change the number of channels, the time range and the compression method.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:14pt; font-weight:700;&quot;&gt;Welcome to the MCAP Editor&lt;br/&gt;&lt;/span&gt;&lt;br/&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;1.&lt;/span&gt; Load an MCAP file.&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;2.&lt;/span&gt; Change the number of topics,&lt;br/&gt;the time range and the compression method.&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;3.&lt;/span&gt; Save your changes into a new file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="wordWrap">
             <bool>true</bool>
@@ -358,6 +389,12 @@
     </item>
     <item>
      <widget class="QSplitter" name="splitter">
+      <property name="lineWidth">
+       <number>1</number>
+      </property>
+      <property name="midLineWidth">
+       <number>0</number>
+      </property>
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
       </property>
@@ -443,7 +480,7 @@
        </property>
        <property name="maximumSize">
         <size>
-         <width>800</width>
+         <width>700</width>
          <height>16777215</height>
         </size>
        </property>
@@ -452,10 +489,10 @@
          <number>11</number>
         </property>
         <property name="topMargin">
-         <number>0</number>
+         <number>11</number>
         </property>
         <property name="rightMargin">
-         <number>0</number>
+         <number>11</number>
         </property>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_7">

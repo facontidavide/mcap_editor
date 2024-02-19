@@ -32,7 +32,8 @@ qt_add_executable(mcap_editor
     src/mainwindow.h
     src/mainwindow.ui
     src/mcap_impl.cpp
-    src/bytearray_writable.hpp)
+    src/bytearray_writable.hpp
+    src/resources.qrc)
 
 target_link_libraries(mcap_editor PRIVATE
     Qt::Core

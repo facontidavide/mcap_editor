@@ -14,6 +14,11 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     ui->tableTopics->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+
+#ifdef USING_WASM
+    ui->buttonLoad->setText("Upload an MCAP");
+    ui->buttonSave->setText("Save and Download");
+#endif
 }
 
 MainWindow::~MainWindow()
@@ -31,19 +36,22 @@ void MainWindow::openFile()
     auto filename = QFileDialog::getOpenFileName(
         this, "Open a MCAP file", dir, "MCAP files (*.mcap)");
 
+    file_opened_ = filename;
+
     if(!filename.isEmpty())
     {
         dir = QFileInfo(filename).absolutePath();
         settings.setValue("MainWindow.lastDirectoryLoad", dir);
 
-        auto res = reader_.open(filename.toStdString());
+        mcap::McapReader reader;
+        auto res = reader.open(filename.toStdString());
         if(!res.ok())
         {
             QMessageBox::warning(this, "Error opening file",
                                  QString::fromStdString(res.message));
             return;
         }
-        readMCAP();
+        readMCAP(reader);
     }
 }
 
@@ -52,19 +60,24 @@ void MainWindow::openFileWASM()
 {
     auto fileContentReady = [this](const QString &fileName,
                                    const QByteArray &fileContent) {
+        file_opened_ = fileName;
         if (!fileName.isEmpty())
         {
+            read_buffer_ = fileContent;
+
             mcap::BufferReader buffer;
             buffer.reset(reinterpret_cast<const std::byte*>(fileContent.data()),
                          fileContent.size(), fileContent.size());
-            auto res = reader_.open(buffer);
+
+            mcap::McapReader reader;
+            auto res = reader.open(buffer);
             if(!res.ok())
             {
                 QMessageBox::warning(this, "Error opening file",
                                      QString::fromStdString(res.message));
                 return;
             }
-            readMCAP();
+            readMCAP(reader);
         }
     };
 
@@ -102,7 +115,6 @@ void MainWindow::saveFile(mcap::McapWriterOptions options)
                              "Can't open the file for writing");
         return;
     }
-    file_opened_ = filename;
     writeMCAP(writer);
 }
 
@@ -128,7 +140,7 @@ void MainWindow::on_buttonLoad_clicked()
 
 void MainWindow::on_buttonSave_clicked()
 {
-    mcap::McapWriterOptions options(reader_.header()->profile);
+    mcap::McapWriterOptions options(profile_);
     if(ui->radioLZ4->isChecked()) {
         options.compression = mcap::Compression::Lz4;
     }
@@ -141,13 +153,22 @@ void MainWindow::on_buttonSave_clicked()
 
 #ifdef USING_WASM
     saveFileWASM(options);
+    ui->buttonSave->setText("Save and Download");
 #else
     saveFile(options);
+    ui->buttonSave->setText("Save");
 #endif
 }
 
-void MainWindow::readMCAP()
+void MainWindow::on_buttonSave_pressed()
 {
+    ui->buttonSave->setText("Saving");
+}
+
+
+void MainWindow::readMCAP(mcap::McapReader& reader)
+{
+    profile_ = reader.header()->profile;
     ui->lineProfile->setText({});
 
     ui->tableTopics->clearContents();
@@ -159,7 +180,7 @@ void MainWindow::readMCAP()
     channel_encoding_.clear();
     ui->widgetSave->setEnabled(false);
 
-    auto status = reader_.readSummary(mcap::ReadSummaryMethod::ForceScan);
+    auto status = reader.readSummary(mcap::ReadSummaryMethod::AllowFallbackScan);
 
     if(!status.ok())
     {
@@ -168,20 +189,20 @@ void MainWindow::readMCAP()
         return;
     }
 
-    auto stats_pt = reader_.statistics();
+    auto stats_pt = reader.statistics();
     if (!stats_pt)
     {
         QMessageBox::warning(this, "Error opening file",
                              "Can't read file statistics");
         return;
     }
-    ui->lineProfile->setText(QString::fromStdString(reader_.header()->profile));
+    ui->lineProfile->setText(QString::fromStdString(reader.header()->profile));
 
     const auto& statistics = stats_pt.value();
     time_start_ = statistics.messageStartTime;
     time_end_ = statistics.messageEndTime;
 
-    for (const auto& [schema_id, schema] : reader_.schemas())
+    for (const auto& [schema_id, schema] : reader.schemas())
     {
         std::string schema_str(reinterpret_cast<const char*>(schema->data.data()),
                                schema->data.size());
@@ -190,9 +211,9 @@ void MainWindow::readMCAP()
         schema_by_id_[schema_id] = info;
     }
 
-    for (const auto& [channel_id, channel] : reader_.channels())
+    for (const auto& [channel_id, channel] : reader.channels())
     {
-        const auto schema = reader_.schemas().at(channel->schemaId);
+        const auto schema = reader.schemas().at(channel->schemaId);
         const auto channel_name = QString::fromStdString(channel->topic);
         const auto schema_name = QString::fromStdString(schema->name);
         const auto encoding = QString::fromStdString(channel->messageEncoding);
@@ -333,11 +354,19 @@ void MainWindow::writeMCAP(mcap::McapWriter& writer)
     QProgressDialog progress("Please wait, this may take a while...", "Cancel", time_start_, time_end_, this);
     progress.setWindowTitle("Saving file");
     progress.setWindowModality(Qt::WindowModal);
+    progress.show();
 
-    for (const auto& msg : reader_.readMessages(problem, options))
+    mcap::McapReader reader;
+    mcap::BufferReader read_buffer;
+    read_buffer.reset(reinterpret_cast<const std::byte*>(read_buffer_.data()),
+                 read_buffer_.size(), read_buffer_.size());
+    auto read_stat = reader.open(read_buffer);
+
+    int count = 0;
+
+    for (const auto& msg : reader.readMessages(problem, options))
     {
         progress.setValue(msg.message.logTime);
-        progress.setValue( msg.message.logTime );
         auto new_channel_id = channel_ids_.at(msg.channel->topic);
 
         mcap::Message new_msg = msg.message;
@@ -349,7 +378,16 @@ void MainWindow::writeMCAP(mcap::McapWriter& writer)
                                  "Can't write a message");
             break;
         }
+        if(count++ % 100 == 0)
+        {
+            QCoreApplication::processEvents();
+        }
+        if (progress.wasCanceled())
+        {
+            break;
+        }
     }
+    progress.close();
 }
 
 void MainWindow::on_buttonToggleSelected_clicked()
