@@ -57,3 +57,8 @@ target_include_directories(mcap_editor PRIVATE
 if(COMPILING_TO_WASM)
   target_link_options(mcap_editor PUBLIC -sASYNCIFY -Os)
 endif()
+
+install(
+    TARGETS mcap_editor
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
