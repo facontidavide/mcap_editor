@@ -1,0 +1,15 @@
+name: snap
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '*'
+  workflow_dispatch:
+
+jobs:
+  snap:
+    uses: ubuntu-robotics/snap_workflows/.github/workflows/snap.yaml@main
+    with:
+      snap-name: mcap-editor
+      publish: true
