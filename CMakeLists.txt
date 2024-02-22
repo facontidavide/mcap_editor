@@ -4,14 +4,12 @@
 cmake_minimum_required(VERSION 3.16)
 project(mcap_editor LANGUAGES CXX)
 
-set(ZSTD_BUILD_SHARED OFF CACHE BOOL "BUILD SHARED LIBRARIES")
 set(ZSTD_MULTITHREAD_SUPPORT OFF CACHE BOOL "MULTITHREADING SUPPORT")
-set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "BUILD PROGRAMS")
-add_subdirectory(3rdparty/zstd/build/cmake)
+add_subdirectory(3rdparty/zstd-1.5.5)
 
 set(LZ4_BUILD_LEGACY_LZ4C OFF CACHE BOOL "Build legacy lz4c")
 set(LZ4_BUILD_CLI OFF CACHE BOOL "Build lz4 program")
-add_subdirectory(3rdparty/lz4/build/cmake)
+add_subdirectory(3rdparty/lz4-1.9.4/build/cmake)
 
 option(COMPILING_TO_WASM "Set to ON if compiling to WASM" OFF)
 
@@ -50,10 +48,11 @@ endif()
 
 target_include_directories(mcap_editor PRIVATE
      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/3rdparty>
-     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/3rdparty/lz4/lib>
-     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/3rdparty/zstd/lib>
+     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/3rdparty/lz4-1.9.4/lib>
+     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/3rdparty/zstd-1.5.5>
+     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/3rdparty/mcap-1.3.0/include>
 )
 
 if(COMPILING_TO_WASM)
-  target_link_options(mcap_editor PUBLIC -sASYNCIFY -Os)
+  target_link_options(mcap_editor PUBLIC -sASYNCIFY)
 endif()

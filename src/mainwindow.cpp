@@ -18,6 +18,8 @@ MainWindow::MainWindow(QWidget *parent) :
 #ifdef USING_WASM
     ui->buttonLoad->setText("Upload an MCAP");
     ui->buttonSave->setText("Save and Download");
+#else
+    ui->horizontalWidgetSaveAs->setHidden(true);
 #endif
 }
 
@@ -78,6 +80,7 @@ void MainWindow::openFileWASM()
                 return;
             }
             readMCAP(reader);
+            ui->lineEditSaveAs->setText(QFileInfo(fileName).fileName());
         }
     };
 
@@ -126,7 +129,7 @@ void MainWindow::saveFileWASM(mcap::McapWriterOptions options)
 
     writeMCAP(writer);
 
-    QFileDialog::saveFileContent(array.byteArray(), QFileInfo(file_opened_).fileName());
+    QFileDialog::saveFileContent(array.byteArray(), ui->lineEditSaveAs->text());
 }
 
 void MainWindow::on_buttonLoad_clicked()
@@ -351,22 +354,25 @@ void MainWindow::writeMCAP(mcap::McapWriter& writer)
         options.endTime = ui->dateTimeEndNew->dateTime().toMSecsSinceEpoch() * 1000000;
     }
 
-    QProgressDialog progress("Please wait, this may take a while...", "Cancel", time_start_, time_end_, this);
+    QProgressDialog progress("Please wait, this may take a while...", "Cancel", 0, 0, this);
     progress.setWindowTitle("Saving file");
     progress.setWindowModality(Qt::WindowModal);
     progress.show();
 
     mcap::McapReader reader;
+#ifdef USING_WASM
     mcap::BufferReader read_buffer;
     read_buffer.reset(reinterpret_cast<const std::byte*>(read_buffer_.data()),
                  read_buffer_.size(), read_buffer_.size());
     auto read_stat = reader.open(read_buffer);
+#else
+    auto res = reader.open(file_opened_.toStdString());
+#endif
 
     int count = 0;
 
     for (const auto& msg : reader.readMessages(problem, options))
     {
-        progress.setValue(msg.message.logTime);
         auto new_channel_id = channel_ids_.at(msg.channel->topic);
 
         mcap::Message new_msg = msg.message;
