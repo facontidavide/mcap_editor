@@ -1,0 +1,56 @@
+name: mcap-editor
+adopt-info: mcap-editor
+summary: MCAP editor (GUI)
+description: |
+  A GUI to edit your MCAP files.
+
+issues: https://github.com/facontidavide/mcap_editor/issues
+source-code: https://github.com/facontidavide/mcap_editor
+license: MIT
+
+confinement: strict
+base: core22
+
+apps:
+  mcap-editor:
+    command: usr/bin/mcap_editor
+    plugs:
+      - desktop
+      - desktop-legacy
+      - opengl
+      - wayland
+      - x11
+      - home
+      - removable-media
+    environment:
+      QT_PLUGIN_PATH: ${SNAP}/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/qt6/plugins/
+
+parts:
+  mcap-editor:
+    plugin: cmake
+    source: .
+    cmake-parameters:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_PREFIX=/usr
+    build-packages:
+      - build-essential
+      - libgl1-mesa-dev
+      - libvulkan-dev
+      - libxkbcommon-dev
+      - qt6-base-dev
+    stage-packages:
+      - libqt6core6
+      - libqt6gui6
+      - libqt6widgets6
+      - libxkbcommon0
+      - qt6-qpa-plugins
+      - qt6-wayland
+    override-pull: |
+        craftctl default
+        git submodule update --init --recursive
+
+        git config --global --add safe.directory '*'
+        version="$(git describe --always --tags| sed -e 's/^v//;s/-/+git/;y/-/./')"
+        [ -n "$(echo $version | grep "+git")" ] && grade=devel || grade=stable
+        craftctl set version="$version"
+        craftctl set grade="$grade"
