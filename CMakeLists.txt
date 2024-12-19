@@ -7,6 +7,9 @@ project(mcap_editor LANGUAGES CXX)
 set(ZSTD_MULTITHREAD_SUPPORT OFF CACHE BOOL "MULTITHREADING SUPPORT")
 add_subdirectory(3rdparty/zstd-1.5.5)
 
+# find dependencies
+find_package(ament_cmake REQUIRED)
+
 set(LZ4_BUILD_LEGACY_LZ4C OFF CACHE BOOL "Build legacy lz4c")
 set(LZ4_BUILD_CLI OFF CACHE BOOL "Build lz4 program")
 add_subdirectory(3rdparty/lz4-1.9.4/build/cmake)
@@ -60,4 +63,12 @@ endif()
 install(
     TARGETS mcap_editor
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    DESTINATION lib/${PROJECT_NAME}
 )
+install(DIRECTORY
+  3rdparty
+  DESTINATION share/${PROJECT_NAME}
+)
+
+
+ament_package()
